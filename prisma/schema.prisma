@@ -1,0 +1,146 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  AGENT
+  CLIENT
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum UnitType {
+  APARTMENT
+  VILLA
+  TOWNHOUSE
+  STUDIO
+}
+
+
+model User {
+  id        Int      @id @default(autoincrement())
+  Fname     String?
+  Lname     String?
+  email     String   @unique
+  Hash      String
+  Role      UserRole
+  createdAt DateTime @default(now())
+
+  companyId    Int?
+  company      Company?       @relation(fields: [companyId], references: [id])
+  units        Unit[]
+  chatAsClient Chat[]         @relation("ChatClient")
+  chatAsAgent  Chat[]         @relation("ChatAgent")
+  subscription Subscription?
+  messages     Message[]
+
+  @@index([companyId])
+}
+
+model Company {
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+
+  users    User[]
+  projects Project[]
+}
+
+model Project {
+  id          Int      @id @default(autoincrement())
+  name        String
+  releaseDate DateTime @default(now())
+  country     String
+  city        String
+  UnitTypes   UnitType[]
+  companyId   Int
+
+  company Company @relation(fields: [companyId], references: [id])
+  units   Unit[]
+
+  @@index([companyId])
+}
+
+model Unit {
+  id           Int     @id @default(autoincrement())
+  type         UnitType
+  price        Float
+  size         Float
+  NumBedrooms  Int
+  NumBathrooms Int
+  projectId    Int
+  ownerId      Int?
+  brochure     String?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  owner   User?   @relation(fields: [ownerId], references: [id])
+
+  @@index([projectId])
+  @@index([ownerId])
+}
+
+model Chat {
+  id       Int @id @default(autoincrement())
+  clientId Int
+  agentId  Int
+
+  client   User      @relation("ChatClient", fields: [clientId], references: [id])
+  agent    User      @relation("ChatAgent", fields: [agentId], references: [id])
+  messages Message[]
+
+  @@index([clientId, agentId])
+}
+
+model Message {
+  id        Int      @id @default(autoincrement())
+  chatId    Int
+  senderId  Int
+  content   String
+  timestamp DateTime @default(now())
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender    User     @relation(fields: [senderId], references: [id])
+}
+
+model Subscription {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  plan      String
+  startDate DateTime @default(now())
+  endDate   DateTime
+  status    SubscriptionStatus
+
+  user     User      @relation(fields: [userId], references: [id])
+  payments Payment[]
+}
+
+model Payment {
+  id             Int          @id @default(autoincrement())
+  subscriptionId Int
+  amount         Float
+  createdAt      DateTime     @default(now())
+  status         PaymentStatus
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+}
