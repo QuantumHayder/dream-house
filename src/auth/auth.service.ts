@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config/dist/config.service';
-import { JwtService } from '@nestjs/jwt/dist/jwt.service';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { AuthDto } from './dto/auth.dto';
 import * as bcrypt from 'bcrypt';
+import { UserRole } from 'generated/prisma/client';
 //import * as bcrypt from 'bcrypt';
 @Injectable()
 export class AuthService {
@@ -13,7 +14,7 @@ export class AuthService {
     private config: ConfigService,
   ) {}
 
-  async signup(payload: AuthDto) {
+  private async createUser(payload: AuthDto, role: UserRole) {
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hash(payload.password, salt);
     const user = await this.prismaService.user.create({
@@ -22,21 +23,50 @@ export class AuthService {
         Hash: hashedPassword,
         Fname: payload.Fname,
         Lname: payload.Lname,
-        Role: payload.Role,
+        Username: payload.Username,
+        Role: role,
       },
       select: {
         id: true,
         email: true,
         Fname: true,
         Lname: true,
+        Username: true,
         Role: true,
         createdAt: true,
       },
     });
     return {
       user,
-      token: await this.signToken({ userId: user.id, email: user.email }),
+      token: await this.signToken(user.id, user.email, user.Role),
     };
+  }
+  async signup(payload: AuthDto) {
+    return this.createUser(payload, UserRole.CLIENT);
+  }
+
+  async signupAgent(payload: AuthDto) {
+    return this.createUser(payload, UserRole.PENDING_AGENT as UserRole);
+  }
+
+  async promote_agent(email: string) {
+    const user = await this.prismaService.user.findUnique({
+      where: {
+        email: email,
+      },
+    });
+
+    if (user && user.Role === UserRole.PENDING_AGENT) {
+      const updatedUser = await this.prismaService.user.update({
+        where: {
+          email: email,
+        },
+        data: {
+          Role: UserRole.AGENT,
+        },
+      });
+      return updatedUser;
+    }
   }
 
   async login(payload: AuthDto) {
@@ -58,15 +88,30 @@ export class AuthService {
     }
     return {
       user,
-      token: await this.signToken({ userId: user.id, email: user.email }),
+      token: await this.signToken(user.id, user.email, user.Role),
     };
   }
 
-  async signToken(payload: { userId: number; email: string }) {
-    const access_token = await this.jwtService.signAsync(payload, {
-      expiresIn: this.config.get('JWT_EXPIRES_IN') ?? '3600',
-      secret: this.config.get('JWT_SECRET'),
+  async signToken(
+    userId: number,
+    email: string,
+    role: UserRole,
+  ): Promise<{ access_token: string }> {
+    const payload = {
+      sub: userId,
+      email: email,
+      role: role,
+    };
+
+    const timeout = this.config.get<number>('JWT_EXPIRES_IN');
+    const secret = this.config.get<string>('JWT_SECRET');
+
+    const token = await this.jwtService.signAsync(payload, {
+      expiresIn: timeout,
+      secret: secret,
     });
-    return { access_token: access_token };
+    return {
+      access_token: token,
+    };
   }
 }

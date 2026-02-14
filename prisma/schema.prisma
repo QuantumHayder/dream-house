@@ -17,6 +17,7 @@ datasource db {
 enum UserRole {
   ADMIN
   AGENT
+  PENDING_AGENT
   CLIENT
 }
 
@@ -42,6 +43,7 @@ enum UnitType {
 
 model User {
   id        Int      @id @default(autoincrement())
+  Username  String   @unique
   Fname     String?
   Lname     String?
   email     String   @unique

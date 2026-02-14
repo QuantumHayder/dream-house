@@ -1,15 +1,13 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from 'src/auth/guard';
+//import { JwtAuthGuard } from 'src/auth/guard';
 import { UserService } from './user.service';
-import { UserRole } from 'generated/prisma/client';
-import { Roles } from './decorators/roles.decorator';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('user')
-@UseGuards(JwtAuthGuard)
+@UseGuards(AuthGuard('jwt'))
 export class UserController {
   constructor(private userService: UserService) {}
   @Post()
-  @Roles(UserRole.ADMIN)
   create() {
     // return this.userService.create(payload);
     return null;
