@@ -48,6 +48,7 @@ model User {
   Lname     String?
   email     String   @unique
   Hash      String
+  hashedRefreshToken String?
   Role      UserRole
   createdAt DateTime @default(now())
 
