@@ -8,6 +8,7 @@ generator client {
   provider     = "prisma-client"
   output       = "../generated/prisma"
   moduleFormat = "cjs"
+  importFileExtension = ""
 }
 
 datasource db {
@@ -43,18 +44,19 @@ enum UnitType {
 
 model User {
   id        Int      @id @default(autoincrement())
-  Username  String   @unique
-  Fname     String?
-  Lname     String?
+  username  String   @unique
+  fname     String?
+  lname     String?
   email     String   @unique
-  Hash      String
+  hash      String
   hashedRefreshToken String?
-  Role      UserRole
+  role      UserRole
   createdAt DateTime @default(now())
 
   companyId    Int?
   company      Company?       @relation(fields: [companyId], references: [id])
-  units        Unit[]
+  units        Unit[]         @relation("purchasedUnits")
+  whishList    Unit[]         @relation("wishlistUnits")
   chatAsClient Chat[]         @relation("ChatClient")
   chatAsAgent  Chat[]         @relation("ChatAgent")
   subscription Subscription?
@@ -99,7 +101,8 @@ model Unit {
   brochure     String?
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  owner   User?   @relation(fields: [ownerId], references: [id])
+  owner   User?   @relation("purchasedUnits",fields: [ownerId], references: [id])
+  wishedUsers User[]    @relation("wishlistUnits")
 
   @@index([projectId])
   @@index([ownerId])

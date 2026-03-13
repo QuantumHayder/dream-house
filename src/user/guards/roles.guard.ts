@@ -6,7 +6,7 @@ import { Request } from 'express';
 
 interface AuthRequest extends Request {
   user: {
-    Role: UserRole;
+    role: UserRole;
   };
 }
 @Injectable()
@@ -25,6 +25,6 @@ export class RolesGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<AuthRequest>();
     const user = request.user;
 
-    return requiredRoles.some((role) => user.Role?.includes(role));
+    return requiredRoles.some((role) => user.role?.includes(role));
   }
 }

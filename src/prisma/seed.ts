@@ -20,11 +20,11 @@ async function main() {
     update: {},
     create: {
       email: 'hayder@dreamhouse.com',
-      Fname: 'Abd El-Rahman',
-      Lname: 'Hayder',
-      Username: 'hayder',
-      Hash: '$2b$10$UM4teIC5tlbdqB2XIeMLNeDXxxJMJTT4PnQCk.EBg1epM4LLWxmtS', // Admin123!
-      Role: 'ADMIN',
+      fname: 'Abd El-Rahman',
+      lname: 'Hayder',
+      username: 'hayder',
+      hash: '$2b$10$UM4teIC5tlbdqB2XIeMLNeDXxxJMJTT4PnQCk.EBg1epM4LLWxmtS', // Admin123!
+      role: 'ADMIN',
     },
   });
   console.log({ HayderAdmin });

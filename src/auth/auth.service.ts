@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -18,35 +22,35 @@ export class AuthService {
   private async createUser(payload: AuthDto, role: UserRole) {
     const userExists = await this.prismaService.user.findUnique({
       where: {
-        Username: payload.Username,
+        username: payload.username,
       },
     });
 
     if (userExists) {
-      throw new ForbiddenException('User Exists!');
+      throw new BadRequestException('User Exists!');
     }
 
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hash(payload.password, salt);
     const newUser = await this.prismaService.user.create({
       data: {
-        Username: payload.Username,
+        username: payload.username,
         email: payload.email,
-        Hash: hashedPassword,
-        Role: role,
+        hash: hashedPassword,
+        role: role,
       },
       select: {
         id: true,
         email: true,
-        Fname: true,
-        Lname: true,
-        Username: true,
-        Role: true,
+        fname: true,
+        lname: true,
+        username: true,
+        role: true,
         createdAt: true,
       },
     });
 
-    const tokens = await this.getTokens(newUser.id, newUser.Username);
+    const tokens = await this.getTokens(newUser.id, newUser.username);
     await this.updateRefreshToken(newUser.id, tokens.refreshToken);
 
     return tokens;
@@ -66,13 +70,13 @@ export class AuthService {
       },
     });
 
-    if (user && user.Role === UserRole.PENDING_AGENT) {
+    if (user && user.role === UserRole.PENDING_AGENT) {
       const updatedUser = await this.prismaService.user.update({
         where: {
           email: email,
         },
         data: {
-          Role: UserRole.AGENT,
+          role: UserRole.AGENT,
         },
       });
       return updatedUser;
@@ -82,20 +86,20 @@ export class AuthService {
   async login(payload: AuthDto) {
     const user = await this.prismaService.user.findUnique({
       where: {
-        Username: payload.Username,
+        username: payload.username,
       },
     });
     if (!user) {
-      throw new ForbiddenException('Invalid UserName');
+      throw new BadRequestException('Invalid UserName');
     }
 
-    const passwordValid = await bcrypt.compare(payload.password, user.Hash);
+    const passwordValid = await bcrypt.compare(payload.password, user.hash);
 
     if (!passwordValid) {
-      throw new ForbiddenException('Invalid passowrd');
+      throw new BadRequestException('Invalid passowrd');
     }
 
-    const tokens = await this.getTokens(user.id, user.Username);
+    const tokens = await this.getTokens(user.id, user.username);
     await this.updateRefreshToken(user.id, tokens.refreshToken);
     return tokens;
   }
@@ -170,27 +174,9 @@ export class AuthService {
       throw new ForbiddenException('Access Denied, invalid token');
     }
 
-    const tokens = await this.getTokens(user.id, user.Username);
+    const tokens = await this.getTokens(user.id, user.username);
     await this.updateRefreshToken(user.id, tokens.refreshToken);
 
     return tokens;
   }
 }
-
-// async signToken(
-//     userId: number,
-//     email: string,
-//     timeout: number,
-//     secret: string,
-//   ): Promise<string> {
-//     const payload = {
-//       sub: userId,
-//       email: email,
-//     };
-
-//     const token = await this.jwtService.signAsync(payload, {
-//       expiresIn: timeout,
-//       secret: secret,
-//     });
-//     return token;
-//   }

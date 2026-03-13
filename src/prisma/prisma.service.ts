@@ -16,10 +16,17 @@ export class PrismaService extends PrismaClient {
     super({ adapter });
   }
 
-  cleanDb() {
+  async cleanDb() {
     return this.$transaction([
-      // this.bookmark.deleteMany(),
-      // this.user.deleteMany()
+      // Delete in dependency order — children before parents
+      this.message.deleteMany(),
+      this.chat.deleteMany(),
+      this.payment.deleteMany(),
+      this.subscription.deleteMany(),
+      this.unit.deleteMany(),
+      this.project.deleteMany(),
+      this.user.deleteMany(),
+      this.company.deleteMany(),
     ]);
   }
 }
