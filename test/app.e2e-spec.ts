@@ -5,7 +5,7 @@ import { AppModule } from './../src/app.module';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as pactum from 'pactum';
 import { AuthDto } from 'src/auth/dto';
-import { UserRole } from 'generated/prisma/client';
+import { UnitType, UserRole } from 'generated/prisma/client';
 // pactum is used instead of supertest
 
 describe('AppController (e2e)', () => {
@@ -30,6 +30,31 @@ describe('AppController (e2e)', () => {
     password: 'agent123',
   };
 
+  const companyDto = {
+    name: 'Test Company',
+  };
+  const projectDto = {
+    name: 'Test Project',
+    country: 'Egypt',
+    city: 'Cairo',
+    UnitTypes: [UnitType.APARTMENT, UnitType.VILLA],
+  };
+  const unitDto = {
+    type: UnitType.VILLA,
+    price: 7000000,
+    size: 555,
+    NumBedrooms: 5,
+    NumBathrooms: 3,
+  };
+  //const Company: Company
+
+  /*
+    Available Units: 2 belongs to Project 1
+    Available Projects: 1 belongs to company 1
+    Available Companies: 1
+    Available Users: 1-> Abd El-Rahman, 2-> test@yahoo.com
+  */
+
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -39,6 +64,11 @@ describe('AppController (e2e)', () => {
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: {
+          enableImplicitConversion: true, // Convert types automatically (e.g., string to number)
+        },
       }),
     );
     await app.init();
@@ -164,6 +194,124 @@ describe('AppController (e2e)', () => {
           .withHeaders({ Authorization: 'Bearer $S{accessToken}' }) // pactum variable syntax
           .expectStatus(200);
       });
+    });
+  });
+
+  describe('User', () => {
+    const userRequestDto = {
+      fname: 'fTest',
+      lname: 'lTest',
+    };
+
+    const wrongUserRequestDto = {
+      fname: 'fTest',
+      lname: 'lTest',
+      role: UserRole.ADMIN,
+      units: [1],
+      wishlist: [2],
+    };
+
+    describe('me', () => {
+      it('should return the current logged user account', () => {
+        return pactum
+          .spec()
+          .get('/user/me')
+          .withHeaders({ Authorization: 'Bearer $S{accessToken}' })
+          .expectStatus(200);
+      });
+
+      it('should not return the current logged user account', () => {
+        return pactum.spec().get('/user/me').expectStatus(401).inspect();
+      });
+    });
+    describe('Edit', () => {
+      it('should edit user account successfully', () => {
+        return pactum
+          .spec()
+          .patch('/user/edit')
+          .withHeaders({ Authorization: 'Bearer $S{accessToken}' })
+          .withBody(userRequestDto)
+          .expectStatus(200)
+          .inspect();
+      });
+      it('should not edit user account', () => {
+        return pactum
+          .spec()
+          .patch('/user/edit')
+          .withHeaders({ Authorization: 'Bearer $S{accessToken}' })
+          .withBody(wrongUserRequestDto)
+          .expectStatus(400)
+          .inspect();
+      });
+    });
+
+    describe('Company', () => {
+      it('should create a company', () => {
+        return pactum
+          .spec()
+          .post('/company')
+          .withBody(companyDto)
+          .withHeaders({ Authorization: 'Bearer $S{accessToken}' })
+          .expectStatus(201)
+          .stores('companyId', 'body.id'); // store for next step
+      });
+    });
+
+    describe('Project', () => {
+      it('should create a project', () => {
+        return pactum
+          .spec()
+          .post('/project')
+          .withBody({ ...projectDto, companyId: '$S{companyId}' })
+          .withHeaders({ Authorization: 'Bearer $S{accessToken}' })
+          .expectStatus(201)
+          .stores('projectId', 'body.id');
+      });
+    });
+
+    describe('Unit', () => {
+      it('should create a unit', () => {
+        return pactum
+          .spec()
+          .post('/unit')
+          .withBody({ ...unitDto, projectId: '$S{projectId}' })
+          .withHeaders({ Authorization: 'Bearer $S{accessToken}' })
+          .expectStatus(201)
+          .stores('unitId', 'body.id'); // store for wishlist tests
+      });
+    });
+    describe('Purchased Units', () => {
+      it('should retrieve the purchased units of the specific user logged in', () => {
+        return pactum
+          .spec()
+          .get('/user/purchased-units')
+          .withHeaders({ Authorization: 'Bearer $S{accessToken}' })
+          .withBody(userRequestDto)
+          .expectStatus(200);
+      });
+
+      it('should return 401 when no token is provided', () => {
+        return pactum.spec().get('/user/purchased-units').expectStatus(401);
+      });
+    });
+
+    describe('WishList Units', () => {
+      it('should retrieve the purchased units of the specific user logged in', () => {
+        return pactum
+          .spec()
+          .get('/user/wishlist')
+          .withHeaders({ Authorization: 'Bearer $S{accessToken}' })
+          .withBody(userRequestDto)
+          .expectStatus(200);
+      });
+
+      it('should return 401 when no token is provided', () => {
+        return pactum.spec().get('/user/wishlist').expectStatus(401);
+      });
+
+      it.todo('should add unit to wishlist');
+      it.todo('should retrieve wishlist with added unit');
+      it.todo('should remove unit from wishlist');
     });
   });
 

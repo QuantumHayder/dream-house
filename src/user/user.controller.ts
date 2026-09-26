@@ -1,8 +1,16 @@
-import { Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { UserService } from './user.service';
-//import { AuthGuard } from '@nestjs/passport';
 import { GetUser } from 'src/auth/decorator';
-//import type { User } from 'generated/prisma/client';
 import { JwtAccessGuard } from 'src/auth/guard';
 import { UserRequestDto } from './dto';
 
@@ -10,11 +18,6 @@ import { UserRequestDto } from './dto';
 @UseGuards(JwtAccessGuard)
 export class UserController {
   constructor(private userService: UserService) {}
-  @Post()
-  create() {
-    // return this.userService.create(payload);
-    return null;
-  }
 
   @Get('/me')
   async getMe(@GetUser('id') userId: number) {
@@ -28,11 +31,35 @@ export class UserController {
     @GetUser('id') userId: number,
     @Body() payload: UserRequestDto,
   ) {
+    console.log('constructor:', payload.constructor.name);
+    console.log('payload:', JSON.stringify(payload));
+    console.log('keys:', Object.keys(payload));
     return await this.userService.editUser(userId, payload);
   }
 
   @Get('/purchased-units')
   async getPurchasedUnits(@GetUser('id') userId: number) {
     return await this.userService.getPurchasedUnits(userId);
+  }
+
+  @Get('/wishlist')
+  async getWishlist(@GetUser('id') userId: number) {
+    return await this.userService.getWishlist(userId);
+  }
+
+  @Post('/wishlist/:unitId')
+  async addToWishlist(
+    @GetUser('id') userId: number,
+    @Param('unitId', ParseIntPipe) unitId: number,
+  ) {
+    return this.userService.addToWishlist(userId, unitId);
+  }
+
+  @Delete('/wishlist/:unitId')
+  async removeFromWishlist(
+    @GetUser('id') userId: number,
+    @Param('unitId', ParseIntPipe) unitId: number,
+  ) {
+    return this.userService.removeFromWishlist(userId, unitId);
   }
 }

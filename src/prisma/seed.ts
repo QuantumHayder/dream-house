@@ -1,4 +1,4 @@
-import { PrismaClient } from 'generated/prisma/client';
+import { PrismaClient, UnitType, UserRole } from 'generated/prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 
@@ -24,10 +24,42 @@ async function main() {
       lname: 'Hayder',
       username: 'hayder',
       hash: '$2b$10$UM4teIC5tlbdqB2XIeMLNeDXxxJMJTT4PnQCk.EBg1epM4LLWxmtS', // Admin123!
-      role: 'ADMIN',
+      role: UserRole.ADMIN,
     },
   });
-  console.log({ HayderAdmin });
+  const companyH = await prisma.company.upsert({
+    where: { id: 1 },
+    update: {},
+    create: {
+      name: 'Inova',
+    },
+  });
+  const projectAura = await prisma.project.upsert({
+    where: { id: 1 },
+    update: {},
+    create: {
+      name: 'Aura',
+      country: 'Egypt',
+      city: 'Cairo',
+      UnitTypes: [UnitType.APARTMENT, UnitType.VILLA],
+      companyId: companyH.id,
+    },
+  });
+
+  const unitA = await prisma.unit.upsert({
+    where: { id: 1 }, //id: 2
+    update: {},
+    create: {
+      type: UnitType.VILLA,
+      price: 7000000,
+      size: 555,
+      NumBedrooms: 5,
+      NumBathrooms: 3,
+      projectId: projectAura.id,
+    },
+  });
+
+  console.log({ HayderAdmin, companyH, projectAura, unitA });
 }
 
 main()

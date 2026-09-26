@@ -1,5 +1,5 @@
 import { IsOptional } from 'class-validator';
-import { UserRole } from 'generated/prisma/client';
+import { UserRole, Unit } from 'generated/prisma/client';
 
 export class UserResponseDto {
   id: number;
@@ -11,6 +11,12 @@ export class UserResponseDto {
 
   @IsOptional()
   lname: string | null;
+
+  @IsOptional()
+  units: Unit[];
+
+  @IsOptional()
+  wishlist: Unit[];
 
   role: UserRole;
   createdAt: Date;

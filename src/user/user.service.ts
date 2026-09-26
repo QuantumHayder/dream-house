@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UserResponseDto } from './dto/userResponse';
 import { toUserResponseDto } from './mappers';
@@ -40,5 +40,70 @@ export class UserService {
         ownerId: userId,
       },
     });
+  }
+
+  async getWishlist(userId: number): Promise<Unit[]> {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+      include: { wishList: true },
+    });
+
+    if (!user) throw new NotFoundException('User not found');
+
+    return user?.wishList ?? [];
+  }
+
+  async addToWishlist(
+    userId: number,
+    unitId: number,
+  ): Promise<UserResponseDto> {
+    const unit = await this.prisma.unit.findUnique({ where: { id: unitId } });
+    if (!unit) {
+      throw new NotFoundException(`Unit with id ${unitId} not found`);
+    }
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        wishList: {
+          connect: { id: unitId },
+        },
+      },
+    });
+    return toUserResponseDto(user);
+  }
+
+  async removeFromWishlist(
+    userId: number,
+    unitId: number,
+  ): Promise<UserResponseDto> {
+    const unit = await this.prisma.unit.findUnique({ where: { id: unitId } });
+    if (!unit) {
+      throw new NotFoundException(`Unit with id ${unitId} not found`);
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id: userId,
+        wishList: { some: { id: unitId } },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(
+        `Unit with id ${unitId} not found in wishlist`,
+      );
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        wishList: {
+          disconnect: { id: unitId },
+        },
+      },
+    });
+    return toUserResponseDto(updatedUser);
   }
 }
